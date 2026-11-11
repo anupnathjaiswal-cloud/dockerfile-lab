@@ -1,21 +1,25 @@
-import http from "http";
+import express from "express";
+
+const app = express();
 
 const PORT = process.env.PORT || 3000;
 
-const server = http.createServer((req, res) => {
-    res.writeHead(200, {
-        "Content-Type": "application/json",
-    });
+app.use(express.json());
 
-    res.end(
-        JSON.stringify({
-            message: "Hello from Docker!",
-            application: "Node.js Docker Lab",
-            status: "running",
-        }),
-    );
+app.get("/", (req, res) => {
+    res.status(200).json({
+        message: "Hello from Docker!",
+        application: "Node.js Optimized Docker Lab",
+        status: "running",
+    });
 });
 
-server.listen(PORT, "0.0.0.0", () => {
+app.get("/health", (req, res) => {
+    res.status(200).json({
+        status: "healthy",
+    });
+});
+
+app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on port ${PORT}`);
 });
