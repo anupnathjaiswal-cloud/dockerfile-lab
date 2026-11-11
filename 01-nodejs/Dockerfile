@@ -1,8 +1,9 @@
 
-# Base image
-FROM node:26-alpine3.23
+# =====================================
+# Stage 1: Dependencies
+# =====================================
+FROM node:26-alpine3.23 AS dependencies
 
-# Set working directory
 WORKDIR /app
 
 # Copy dependency manifests
@@ -11,16 +12,26 @@ COPY package*.json ./
 # Install production dependencies
 RUN npm ci --omit=dev
 
-HEALTHCHECK --interval=30s \
-  --timeout=3s \
-  --start-period=5s \
-  --retries=3 \
-  CMD node -e "require('http').get('http://127.0.0.1:3000/health', (res) => process.exit(res.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"
 
-# Copy application source
+# =====================================
+# Stage 2: Production
+# =====================================
+FROM node:26-alpine3.23 AS production
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+# Copy dependencies from first stage
+COPY --from=dependencies /app/node_modules ./node_modules
+
+# Copy application files
+COPY package.json ./
 COPY src/ ./src/
 
-# Document application port
+# Run as non-root user
+USER node
+
 EXPOSE 3000
 
 # Start application
