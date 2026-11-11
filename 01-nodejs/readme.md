@@ -1,8 +1,12 @@
 # Node.js Docker Lab
 
-A practical Docker learning example demonstrating how to containerize a Node.js application using a basic Dockerfile.
+A practical collection of Dockerfile examples demonstrating how to containerize and optimize Node.js applications.
 
-## Project Structure
+## Version 4: Non-Root Dockerfile
+
+This example demonstrates running a Node.js application using a non-root Linux user to follow the principle of least privilege.
+
+### Project Structure
 
 ```text
 nodejs/
@@ -11,109 +15,104 @@ nodejs/
 ├── .dockerignore
 ├── Dockerfile
 ├── package.json
+├── package-lock.json
 └── README.md
 ```
 
-## Prerequisites
-
-- Node.js 26+
-- Docker Engine or Docker Desktop
-
-## Application
-
-A simple HTTP server built using Node.js's native HTTP module.
-
-Default application port: `3000`
-
-## Dockerfile
+### Dockerfile
 
 ```dockerfile
+# Base image
 FROM node:26-alpine3.23
 
+# Set working directory
 WORKDIR /app
 
-COPY package.json .
+# Copy application files with correct ownership
+COPY --chown=node:node package.json ./
+COPY --chown=node:node src/ ./src/
 
-COPY src/ ./src/
+# Set production environment
+ENV NODE_ENV=production
 
+# Switch to non-root user
+USER node
+
+# Document application port
 EXPOSE 3000
 
-CMD ["npm", "start"]
+# Start application
+CMD ["node", "src/server.js"]
 ```
 
-## Build Docker Image
+### Build Image
 
 Run from the `nodejs/` directory:
 
 ```bash
-docker build -t dockerfile-lab-node .
+docker build -t dockerfile-lab-node:non-root .
 ```
 
-## Run Container
+### Run Container
 
 ```bash
 docker run -d \
-  --name nodejs-demo \
-  -p 3000:3000 \
-  dockerfile-lab-node
+  --name nodejs-non-root \
+  -p 3002:3000 \
+  dockerfile-lab-node:non-root
 ```
 
-## Test Application
+### Verify Container User
 
 ```bash
-curl http://localhost:3000
+docker exec nodejs-non-root whoami
 ```
 
-Expected response:
+Expected output:
 
-```json
-{
-  "message": "Hello from Docker!",
-  "application": "Node.js Docker Lab",
-  "status": "running"
-}
+```text
+node
 ```
 
-## Container Management
-
-View running containers:
+Inspect user and group IDs:
 
 ```bash
-docker ps
+docker exec nodejs-non-root id
 ```
 
-View application logs:
+### Test Application
 
 ```bash
-docker logs nodejs-demo
+curl http://localhost:3002
 ```
 
-Stop container:
+### Test Root Directory Permissions
 
 ```bash
-docker stop nodejs-demo
+docker exec nodejs-non-root sh -c "touch /root/test.txt"
 ```
 
-Remove container:
+The operation should fail because the application runs without root privileges.
 
-```bash
-docker rm nodejs-demo
-```
+### Docker Concepts Covered
 
-## Docker Concepts Covered
+| Instruction / Concept | Purpose                                                   |
+| --------------------- | --------------------------------------------------------- |
+| `USER`                | Specifies the user running subsequent container processes |
+| `COPY --chown`        | Sets ownership of copied files                            |
+| `ENV`                 | Configures environment variables                          |
+| Linux UID/GID         | Identifies users and groups                               |
+| Least Privilege       | Limits unnecessary permissions                            |
 
-- `FROM` — Base image selection
-- `WORKDIR` — Working directory configuration
-- `COPY` — Copying application files
-- `EXPOSE` — Documenting application port
-- `CMD` — Container startup command
-- `.dockerignore` — Excluding unnecessary build-context files
-- Image building and container execution
+### Security Benefits
 
-## Learning Objectives
+- Avoids running the application as root.
+- Reduces the impact of certain application compromises.
+- Establishes better file ownership.
+- Encourages least-privilege container design.
 
-Understand the fundamentals of Dockerizing a Node.js application before moving towards optimized, multi-stage, and production-ready Dockerfiles.
+**Note:** Running as a non-root user is one security measure, not a complete container security solution.
 
 ---
 
-Part of **Dockerfile Lab** — A collection of practical Dockerfile examples across different technologies.
+Part of **Dockerfile Lab** — Practical Dockerfile examples across multiple technologies.
